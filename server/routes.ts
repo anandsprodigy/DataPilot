@@ -245,6 +245,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.send(zipBuffer);
       } else {
         console.log(`Zip file not found: ${zipPath}`);
+        console.log(`Results directory exists: ${fs.existsSync(resultsDir)}`);
+        console.log(`Results directory path: ${resultsDir}`);
         console.log('Available files in results:', fs.existsSync(resultsDir) ? fs.readdirSync(resultsDir) : []);
         res.status(404).json({ message: 'Results not found' });
       }
