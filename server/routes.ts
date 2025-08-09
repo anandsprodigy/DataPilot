@@ -83,13 +83,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start safety stock calculations
   app.post('/api/calculate', async (req, res) => {
     try {
-      const { historyData, itemMaster, forecastData } = req.body;
+      // Get the latest uploaded files from database
+      const files = await db.select().from(uploadedFiles).orderBy(uploadedFiles.uploadedAt);
+      
+      console.log(`Found ${files.length} uploaded files in database`);
+      
+      let historyData: any[] = [];
+      let itemMaster: any[] = [];
+      let forecastData: any[] = [];
+      
+      // Parse the stored file data
+      for (const file of files) {
+        console.log(`Processing file: ${file.fileName} (type: ${file.fileType})`);
+        const csvData = CSVParser.parseCSV(file.content);
+        
+        if (file.fileType === 'historyData') {
+          historyData = CSVParser.parseHistoryData(file.content);
+          console.log(`Parsed history data: ${historyData.length} rows`);
+        } else if (file.fileType === 'itemMaster') {
+          itemMaster = CSVParser.parseItemMaster(file.content);
+          console.log(`Parsed item master: ${itemMaster.length} rows`);
+        } else if (file.fileType === 'forecastData') {
+          forecastData = CSVParser.parseForecastData(file.content);
+          console.log(`Parsed forecast data: ${forecastData.length} rows`);
+        }
+      }
+      
+      if (historyData.length === 0 || itemMaster.length === 0) {
+        return res.status(400).json({ 
+          message: 'Required files not found. Please upload History Data and Item Master files.' 
+        });
+      }
       
       // Validate input
       const validatedData = insertCalculationSchema.parse({
         historyData: JSON.stringify(historyData),
         itemMaster: JSON.stringify(itemMaster),
-        forecastData: forecastData ? JSON.stringify(forecastData) : undefined
+        forecastData: forecastData.length > 0 ? JSON.stringify(forecastData) : undefined
       });
 
       // Create calculation record
@@ -100,6 +130,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ calculationId: calculation.id });
     } catch (error: any) {
+      console.error('Calculate endpoint error:', error);
       res.status(400).json({ message: error.message });
     }
   });
