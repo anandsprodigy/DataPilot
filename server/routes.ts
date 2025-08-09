@@ -249,20 +249,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let hasFiles = false;
 
       // Add history results if available
-      if (calculation.historyResults) {
+      if (calculation.historyResults && calculation.historyResults.length > 0) {
         const historyCsv = CSVParser.generateCSV(calculation.historyResults);
         zip.file('SAFETY_STOCK_DATA.csv', historyCsv);
         hasFiles = true;
+        console.log('Added history results to zip');
       }
 
-      // Add forecast results if available
-      if (calculation.forecastResults) {
+      // Add forecast results if available  
+      if (calculation.forecastResults && calculation.forecastResults.length > 0) {
         const forecastCsv = CSVParser.generateCSV(calculation.forecastResults);
         zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsv);
         hasFiles = true;
+        console.log('Added forecast results to zip');
       }
 
       if (!hasFiles) {
+        console.log('No results found for zip generation:', {
+          historyCount: calculation.historyResults?.length || 0,
+          forecastCount: calculation.forecastResults?.length || 0
+        });
         return res.status(404).json({ message: 'No results found' });
       }
 
