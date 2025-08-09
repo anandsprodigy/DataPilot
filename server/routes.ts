@@ -231,10 +231,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       console.log(`Attempting to download zip for calculation ID: ${id}`);
+      console.log(`Available calculation IDs:`, Array.from(calculations.keys()));
       const calculation = calculations.get(id);
       
       if (!calculation) {
-        console.log(`Calculation not found for ID: ${id}`);
+        console.log(`Calculation not found for ID: ${id}. Total calculations: ${calculations.size}`);
+        
+        // Try to read results from files instead
+        const historyFilePath = path.join(resultsDir, 'SAFETY_STOCK_DATA.csv');
+        const forecastFilePath = path.join(resultsDir, 'SAFETY_STOCK_FCST_BASED.csv');
+        
+        console.log(`Trying to read from files:`, {
+          historyExists: fs.existsSync(historyFilePath),
+          forecastExists: fs.existsSync(forecastFilePath)
+        });
+        
+        if (fs.existsSync(historyFilePath) || fs.existsSync(forecastFilePath)) {
+          const zip = new JSZip();
+          let hasFiles = false;
+          
+          if (fs.existsSync(historyFilePath)) {
+            const historyCsv = fs.readFileSync(historyFilePath, 'utf8');
+            zip.file('SAFETY_STOCK_DATA.csv', historyCsv);
+            hasFiles = true;
+            console.log('Added history results from file to zip');
+          }
+          
+          if (fs.existsSync(forecastFilePath)) {
+            const forecastCsv = fs.readFileSync(forecastFilePath, 'utf8');
+            zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsv);
+            hasFiles = true;
+            console.log('Added forecast results from file to zip');
+          }
+          
+          if (hasFiles) {
+            const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+            
+            res.setHeader('Content-Type', 'application/zip');
+            res.setHeader('Content-Disposition', 'attachment; filename="safety_stock_results.zip"');
+            return res.send(zipBuffer);
+          }
+        }
+        
         return res.status(404).json({ message: 'Calculation not found' });
       }
 
