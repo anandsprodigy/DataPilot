@@ -34,30 +34,32 @@ export function FileUpload({ onFilesUploaded, onStartCalculation }: FileUploadPr
       const response = await apiRequest('POST', '/api/upload', formData);
       const results = await response.json();
       
-      const newUploadedFiles: UploadedFiles = { ...uploadedFiles };
-      
-      Object.entries(results).forEach(([key, result]: [string, any]) => {
-        if (result.success) {
-          newUploadedFiles[key as keyof UploadedFiles] = {
-            data: [],
-            preview: result.preview || [],
-            recordCount: result.recordCount || 0
-          };
-          toast({
-            title: "File uploaded",
-            description: `${key} uploaded successfully with ${result.recordCount} records`,
-          });
-        } else {
-          toast({
-            title: "Upload failed",
-            description: result.message,
-            variant: "destructive",
-          });
-        }
+      setUploadedFiles(prevUploadedFiles => {
+        const newUploadedFiles: UploadedFiles = { ...prevUploadedFiles };
+        
+        Object.entries(results).forEach(([key, result]: [string, any]) => {
+          if (result.success) {
+            newUploadedFiles[key as keyof UploadedFiles] = {
+              data: [],
+              preview: result.preview || [],
+              recordCount: result.recordCount || 0
+            };
+            toast({
+              title: "File uploaded",
+              description: `${key} uploaded successfully with ${result.recordCount} records`,
+            });
+          } else {
+            toast({
+              title: "Upload failed",
+              description: result.message,
+              variant: "destructive",
+            });
+          }
+        });
+        
+        onFilesUploaded(newUploadedFiles);
+        return newUploadedFiles;
       });
-      
-      setUploadedFiles(newUploadedFiles);
-      onFilesUploaded(newUploadedFiles);
       
     } catch (error: any) {
       toast({
@@ -75,7 +77,7 @@ export function FileUpload({ onFilesUploaded, onStartCalculation }: FileUploadPr
       if (acceptedFiles.length > 0) {
         uploadFiles({ [fileType]: acceptedFiles[0] });
       }
-    }, []);
+    }, [fileType]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
       onDrop,
