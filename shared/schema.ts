@@ -14,6 +14,17 @@ export const calculations = pgTable("calculations", {
   createdAt: text("created_at").default(sql`now()`),
 });
 
+// Table for storing uploaded file data locally
+export const uploadedFiles = pgTable("uploaded_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(), // 'historyData', 'itemMaster', 'forecastData'
+  content: text("content").notNull(), // CSV content as text
+  recordCount: integer("record_count").notNull(),
+  previewData: text("preview_data").notNull(), // JSON string of first 10 rows
+  createdAt: text("created_at").default(sql`now()`),
+});
+
 export const insertCalculationSchema = createInsertSchema(calculations).pick({
   historyData: true,
   itemMaster: true,
