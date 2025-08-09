@@ -252,7 +252,9 @@ async function processCalculation(
     await storage.updateCalculation(id, { status: 'history-calc' });
     
     // Calculate history-based safety stock
+    console.log(`Processing history data: ${historyData.length} rows, item master: ${itemMaster.length} rows`);
     const historyResults = SafetyStockCalculator.calculateHistoryBased(historyData, itemMaster);
+    console.log(`History calculation result: ${historyResults.length} items calculated`);
     
     await storage.updateCalculation(id, { 
       historyResults: JSON.stringify(historyResults)
@@ -264,7 +266,9 @@ async function processCalculation(
     if (forecastData && forecastData.length > 0) {
       await storage.updateCalculation(id, { status: 'forecast-calc' });
       
+      console.log(`Processing forecast data: ${forecastData.length} rows`);
       const forecastResults = SafetyStockCalculator.calculateForecastBased(forecastData, itemMaster);
+      console.log(`Forecast calculation result: ${forecastResults.length} items calculated`);
       
       await storage.updateCalculation(id, { 
         forecastResults: JSON.stringify(forecastResults)

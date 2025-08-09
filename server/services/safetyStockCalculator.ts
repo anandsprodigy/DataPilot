@@ -58,6 +58,11 @@ export class SafetyStockCalculator {
     historyData: HistoryDataRow[],
     itemMaster: ItemMasterRow[]
   ): SafetyStockHistoryResult[] {
+    console.log('Starting history-based calculation with:', { 
+      historyCount: historyData.length, 
+      masterCount: itemMaster.length 
+    });
+    
     // Group history data by item and org
     const grouped = new Map<string, HistoryDataRow[]>();
     for (const row of historyData) {
@@ -68,17 +73,26 @@ export class SafetyStockCalculator {
       grouped.get(key)!.push(row);
     }
 
+    console.log('Grouped history data into', grouped.size, 'item-org combinations');
+
     const results: SafetyStockHistoryResult[] = [];
 
     for (const [key, rows] of Array.from(grouped.entries())) {
       const [itemName, orgCode] = key.split('-');
+      
+      console.log(`Processing item: ${itemName}, org: ${orgCode}, rows: ${rows.length}`);
       
       // Find matching master data
       const masterData = itemMaster.find(
         m => m.ITEM_NAME === itemName && m.ORG_CODE === orgCode
       );
       
-      if (!masterData) continue;
+      if (!masterData) {
+        console.log(`No master data found for ${itemName}-${orgCode}`);
+        continue;
+      }
+      
+      console.log(`Found master data for ${itemName}-${orgCode}:`, masterData);
 
       // Calculate total quantity and date range
       const totalQty = rows.reduce((sum: number, row: HistoryDataRow) => sum + row.REF_QTY, 0);
