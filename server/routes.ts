@@ -7,7 +7,7 @@ import { SafetyStockCalculator } from "./services/safetyStockCalculator";
 import multer from "multer";
 
 interface MulterRequest extends Request {
-  files?: { [fieldname: string]: Express.Multer.File[] };
+  files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
 }
 
 const upload = multer({ 
@@ -25,7 +25,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ]), async (req: MulterRequest, res) => {
     try {
       const files = req.files;
+      console.log('Upload request received:', { files: files ? Object.keys(files) : 'no files' });
       const responses: { [key: string]: FileUploadResponse } = {};
+
+      if (!files || Object.keys(files).length === 0) {
+        console.log('No files received in upload request');
+        return res.json({});
+      }
 
       for (const [fieldName, fileArray] of Object.entries(files || {})) {
         if (fileArray && fileArray.length > 0) {
