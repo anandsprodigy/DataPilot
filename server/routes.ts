@@ -1,20 +1,66 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { insertCalculationSchema, type FileUploadResponse, type CalculationProgress } from "@shared/schema";
+import { type FileUploadResponse, type CalculationProgress } from "@shared/schema";
 import { CSVParser } from "./services/csvParser";
 import { SafetyStockCalculator } from "./services/safetyStockCalculator";
 import multer from "multer";
 import JSZip from "jszip";
+import fs from "fs";
+import path from "path";
 
 interface MulterRequest extends Request {
   files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
+}
+
+// Create directories if they don't exist
+const uploadDir = path.join(process.cwd(), 'uploads');
+const resultsDir = path.join(process.cwd(), 'results');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+if (!fs.existsSync(resultsDir)) {
+  fs.mkdirSync(resultsDir, { recursive: true });
 }
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
+
+// In-memory calculation tracking
+const calculations = new Map<string, {
+  id: string;
+  status: string;
+  historyResults?: any[];
+  forecastResults?: any[];
+  createdAt: Date;
+}>();
+
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
+function clearAllFiles() {
+  // Clear uploads directory
+  if (fs.existsSync(uploadDir)) {
+    const files = fs.readdirSync(uploadDir);
+    for (const file of files) {
+      fs.unlinkSync(path.join(uploadDir, file));
+    }
+  }
+  
+  // Clear results directory
+  if (fs.existsSync(resultsDir)) {
+    const files = fs.readdirSync(resultsDir);
+    for (const file of files) {
+      fs.unlinkSync(path.join(resultsDir, file));
+    }
+  }
+  
+  // Clear calculations memory
+  calculations.clear();
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -34,15 +80,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({});
       }
 
-      for (const [fieldName, fileArray] of Object.entries(files || {})) {
-        if (fileArray && fileArray.length > 0) {
+      for (const [fieldName, fileArray] of Object.entries(files as { [key: string]: Express.Multer.File[] })) {
+        if (Array.isArray(fileArray) && fileArray.length > 0) {
           const file = fileArray[0];
-          const csvText = file.buffer.toString('utf-8');
-
+          const csvText = file.buffer.toString('utf8');
+          
           try {
+            // Save file to uploads directory
+            const fileName = `${fieldName}.csv`;
+            const filePath = path.join(uploadDir, fileName);
+            fs.writeFileSync(filePath, csvText);
+            
             let data: any[] = [];
             let recordCount = 0;
-
+            
             switch (fieldName) {
               case 'historyData':
                 data = CSVParser.parseHistoryData(csvText);
@@ -83,52 +134,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Start safety stock calculations
   app.post('/api/calculate', async (req, res) => {
     try {
-      // Get the latest uploaded files from database
-      const files = await db.select().from(uploadedFiles).orderBy(uploadedFiles.uploadedAt);
+      // Read uploaded files from uploads directory
+      const historyFilePath = path.join(uploadDir, 'historyData.csv');
+      const itemMasterFilePath = path.join(uploadDir, 'itemMaster.csv');
+      const forecastFilePath = path.join(uploadDir, 'forecastData.csv');
       
-      console.log(`Found ${files.length} uploaded files in database`);
-      
-      let historyData: any[] = [];
-      let itemMaster: any[] = [];
-      let forecastData: any[] = [];
-      
-      // Parse the stored file data
-      for (const file of files) {
-        console.log(`Processing file: ${file.fileName} (type: ${file.fileType})`);
-        const csvData = CSVParser.parseCSV(file.content);
-        
-        if (file.fileType === 'historyData') {
-          historyData = CSVParser.parseHistoryData(file.content);
-          console.log(`Parsed history data: ${historyData.length} rows`);
-        } else if (file.fileType === 'itemMaster') {
-          itemMaster = CSVParser.parseItemMaster(file.content);
-          console.log(`Parsed item master: ${itemMaster.length} rows`);
-        } else if (file.fileType === 'forecastData') {
-          forecastData = CSVParser.parseForecastData(file.content);
-          console.log(`Parsed forecast data: ${forecastData.length} rows`);
-        }
-      }
-      
-      if (historyData.length === 0 || itemMaster.length === 0) {
+      if (!fs.existsSync(historyFilePath) || !fs.existsSync(itemMasterFilePath)) {
         return res.status(400).json({ 
           message: 'Required files not found. Please upload History Data and Item Master files.' 
         });
       }
       
-      // Validate input
-      const validatedData = insertCalculationSchema.parse({
-        historyData: JSON.stringify(historyData),
-        itemMaster: JSON.stringify(itemMaster),
-        forecastData: forecastData.length > 0 ? JSON.stringify(forecastData) : undefined
+      // Create new calculation
+      const calculationId = generateId();
+      calculations.set(calculationId, {
+        id: calculationId,
+        status: 'pending',
+        createdAt: new Date()
       });
 
-      // Create calculation record
-      const calculation = await storage.createCalculation(validatedData);
-
       // Start async calculation process
-      processCalculation(calculation.id, historyData, itemMaster, forecastData);
+      processCalculation(calculationId);
 
-      res.json({ calculationId: calculation.id });
+      res.json({ calculationId });
     } catch (error: any) {
       console.error('Calculate endpoint error:', error);
       res.status(400).json({ message: error.message });
@@ -139,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/calculate/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const calculation = await storage.getCalculation(id);
+      const calculation = calculations.get(id);
       
       if (!calculation) {
         return res.status(404).json({ message: 'Calculation not found' });
@@ -152,11 +180,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       if (calculation.historyResults) {
-        response.historyResults = JSON.parse(calculation.historyResults);
+        response.historyResults = calculation.historyResults;
       }
 
       if (calculation.forecastResults) {
-        response.forecastResults = JSON.parse(calculation.forecastResults);
+        response.forecastResults = calculation.forecastResults;
       }
 
       res.json(response);
@@ -169,7 +197,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/download/:id/:type', async (req, res) => {
     try {
       const { id, type } = req.params;
-      const calculation = await storage.getCalculation(id);
+      const calculation = calculations.get(id);
       
       if (!calculation) {
         return res.status(404).json({ message: 'Calculation not found' });
@@ -179,10 +207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filename = '';
 
       if (type === 'history' && calculation.historyResults) {
-        data = JSON.parse(calculation.historyResults);
+        data = calculation.historyResults;
         filename = 'SAFETY_STOCK_DATA.csv';
       } else if (type === 'forecast' && calculation.forecastResults) {
-        data = JSON.parse(calculation.forecastResults);
+        data = calculation.forecastResults;
         filename = 'SAFETY_STOCK_FCST_BASED.csv';
       } else {
         return res.status(404).json({ message: 'Results not found' });
@@ -203,7 +231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       console.log(`Attempting to download zip for calculation ID: ${id}`);
-      const calculation = await storage.getCalculation(id);
+      const calculation = calculations.get(id);
       
       if (!calculation) {
         console.log(`Calculation not found for ID: ${id}`);
@@ -222,16 +250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add history results if available
       if (calculation.historyResults) {
-        const historyData = JSON.parse(calculation.historyResults);
-        const historyCsv = CSVParser.generateCSV(historyData);
+        const historyCsv = CSVParser.generateCSV(calculation.historyResults);
         zip.file('SAFETY_STOCK_DATA.csv', historyCsv);
         hasFiles = true;
       }
 
       // Add forecast results if available
       if (calculation.forecastResults) {
-        const forecastData = JSON.parse(calculation.forecastResults);
-        const forecastCsv = CSVParser.generateCSV(forecastData);
+        const forecastCsv = CSVParser.generateCSV(calculation.forecastResults);
         zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsv);
         hasFiles = true;
       }
@@ -253,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clear all data endpoint
   app.post('/api/clear-all', async (req, res) => {
     try {
-      await storage.clearAllFiles();
+      clearAllFiles();
       res.json({ message: 'All data cleared successfully' });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -264,58 +290,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-async function processCalculation(
-  id: string, 
-  historyData: any[], 
-  itemMaster: any[], 
-  forecastData?: any[]
-) {
+async function processCalculation(id: string) {
   try {
     console.log(`Starting calculation process for ID: ${id}`);
     
+    const calculation = calculations.get(id);
+    if (!calculation) return;
+
     // Update status to validation
-    await storage.updateCalculation(id, { status: 'validation' });
+    calculation.status = 'validation';
     
     // Simulate some processing time
     await new Promise(resolve => setTimeout(resolve, 1000));
 
+    // Read and parse files
+    const historyFilePath = path.join(uploadDir, 'historyData.csv');
+    const itemMasterFilePath = path.join(uploadDir, 'itemMaster.csv');
+    const forecastFilePath = path.join(uploadDir, 'forecastData.csv');
+
+    const historyData = CSVParser.parseHistoryData(fs.readFileSync(historyFilePath, 'utf8'));
+    const itemMaster = CSVParser.parseItemMaster(fs.readFileSync(itemMasterFilePath, 'utf8'));
+    
+    console.log(`Processing history data: ${historyData.length} rows, item master: ${itemMaster.length} rows`);
+
     // Update status to history calculation
-    await storage.updateCalculation(id, { status: 'history-calc' });
+    calculation.status = 'history-calc';
     
     // Calculate history-based safety stock
-    console.log(`Processing history data: ${historyData.length} rows, item master: ${itemMaster.length} rows`);
     const historyResults = SafetyStockCalculator.calculateHistoryBased(historyData, itemMaster);
     console.log(`History calculation result: ${historyResults.length} items calculated`);
     
-    await storage.updateCalculation(id, { 
-      historyResults: JSON.stringify(historyResults)
-    });
+    calculation.historyResults = historyResults;
     
+    // Save history results to file
+    if (historyResults.length > 0) {
+      const historyCsv = CSVParser.generateCSV(historyResults);
+      fs.writeFileSync(path.join(resultsDir, 'SAFETY_STOCK_DATA.csv'), historyCsv);
+    }
+
     console.log(`History results stored for ID: ${id}, count: ${historyResults.length}`);
 
     // If forecast data is provided, calculate forecast-based safety stock
-    if (forecastData && forecastData.length > 0) {
-      await storage.updateCalculation(id, { status: 'forecast-calc' });
+    if (fs.existsSync(forecastFilePath)) {
+      calculation.status = 'forecast-calc';
       
+      const forecastData = CSVParser.parseForecastData(fs.readFileSync(forecastFilePath, 'utf8'));
       console.log(`Processing forecast data: ${forecastData.length} rows`);
       const forecastResults = SafetyStockCalculator.calculateForecastBased(forecastData, itemMaster);
       console.log(`Forecast calculation result: ${forecastResults.length} items calculated`);
       
-      await storage.updateCalculation(id, { 
-        forecastResults: JSON.stringify(forecastResults)
-      });
+      calculation.forecastResults = forecastResults;
+      
+      // Save forecast results to file
+      if (forecastResults.length > 0) {
+        const forecastCsv = CSVParser.generateCSV(forecastResults);
+        fs.writeFileSync(path.join(resultsDir, 'SAFETY_STOCK_FCST_BASED.csv'), forecastCsv);
+      }
       
       console.log(`Forecast results stored for ID: ${id}, count: ${forecastResults.length}`);
     }
 
     // Mark as complete
-    await storage.updateCalculation(id, { status: 'complete' });
+    calculation.status = 'complete';
     
     console.log(`Calculation completed for ID: ${id}`);
     
   } catch (error) {
     console.error('Calculation error:', error);
-    await storage.updateCalculation(id, { status: 'error' });
+    const calculation = calculations.get(id);
+    if (calculation) {
+      calculation.status = 'error';
+    }
   }
 }
 
@@ -326,17 +371,18 @@ function getProgressPercentage(status: string): number {
     case 'history-calc': return 50;
     case 'forecast-calc': return 75;
     case 'complete': return 100;
+    case 'error': return 100;
     default: return 0;
   }
 }
 
 function getProgressMessage(status: string): string {
   switch (status) {
-    case 'pending': return 'Calculation queued';
-    case 'validation': return 'Validating data integrity';
-    case 'history-calc': return 'Calculating history-based safety stock';
-    case 'forecast-calc': return 'Calculating forecast-based safety stock';
-    case 'complete': return 'Calculations complete';
+    case 'pending': return 'Initializing calculation...';
+    case 'validation': return 'Validating input data...';
+    case 'history-calc': return 'Calculating history-based safety stock...';
+    case 'forecast-calc': return 'Calculating forecast-based safety stock...';
+    case 'complete': return 'Calculation completed successfully';
     case 'error': return 'Calculation failed';
     default: return 'Unknown status';
   }
