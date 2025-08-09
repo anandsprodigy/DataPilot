@@ -231,96 +231,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       console.log(`Attempting to download zip for calculation ID: ${id}`);
-      console.log(`Available calculation IDs:`, Array.from(calculations.keys()));
-      const calculation = calculations.get(id);
       
-      if (!calculation) {
-        console.log(`Calculation not found for ID: ${id}. Total calculations: ${calculations.size}`);
-        
-        // Try to read results from files instead
-        const historyFilePath = path.join(resultsDir, 'SAFETY_STOCK_DATA.csv');
-        const forecastFilePath = path.join(resultsDir, 'SAFETY_STOCK_FCST_BASED.csv');
-        
-        console.log(`Results directory: ${resultsDir}`);
-        console.log(`History file path: ${historyFilePath}`);
-        console.log(`Forecast file path: ${forecastFilePath}`);
-        console.log(`Trying to read from files:`, {
-          historyExists: fs.existsSync(historyFilePath),
-          forecastExists: fs.existsSync(forecastFilePath),
-          resultsDirExists: fs.existsSync(resultsDir),
-          resultsDirFiles: fs.existsSync(resultsDir) ? fs.readdirSync(resultsDir) : []
-        });
-        
-        if (fs.existsSync(historyFilePath) || fs.existsSync(forecastFilePath)) {
-          const zip = new JSZip();
-          let hasFiles = false;
-          
-          if (fs.existsSync(historyFilePath)) {
-            const historyCsv = fs.readFileSync(historyFilePath, 'utf8');
-            zip.file('SAFETY_STOCK_DATA.csv', historyCsv);
-            hasFiles = true;
-            console.log('Added history results from file to zip');
-          }
-          
-          if (fs.existsSync(forecastFilePath)) {
-            const forecastCsv = fs.readFileSync(forecastFilePath, 'utf8');
-            zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsv);
-            hasFiles = true;
-            console.log('Added forecast results from file to zip');
-          }
-          
-          if (hasFiles) {
-            const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-            
-            res.setHeader('Content-Type', 'application/zip');
-            res.setHeader('Content-Disposition', 'attachment; filename="safety_stock_results.zip"');
-            return res.send(zipBuffer);
-          }
-        }
-        
-        return res.status(404).json({ message: 'Calculation not found' });
-      }
-
-      console.log(`Found calculation:`, {
-        id: calculation.id,
-        status: calculation.status,
-        hasHistoryResults: !!calculation.historyResults,
-        hasForecastResults: !!calculation.forecastResults
-      });
-
-      const zip = new JSZip();
-      let hasFiles = false;
-
-      // Add history results if available
-      if (calculation.historyResults && calculation.historyResults.length > 0) {
-        const historyCsv = CSVParser.generateCSV(calculation.historyResults);
-        zip.file('SAFETY_STOCK_DATA.csv', historyCsv);
-        hasFiles = true;
-        console.log('Added history results to zip');
-      }
-
-      // Add forecast results if available  
-      if (calculation.forecastResults && calculation.forecastResults.length > 0) {
-        const forecastCsv = CSVParser.generateCSV(calculation.forecastResults);
-        zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsv);
-        hasFiles = true;
-        console.log('Added forecast results to zip');
-      }
-
-      if (!hasFiles) {
-        console.log('No results found for zip generation:', {
-          historyCount: calculation.historyResults?.length || 0,
-          forecastCount: calculation.forecastResults?.length || 0
-        });
-        return res.status(404).json({ message: 'No results found' });
-      }
-
-      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      // Check for pre-generated zip file
+      const zipPath = path.join(resultsDir, 'safety_stock_results.zip');
       
-      res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', 'attachment; filename="safety_stock_results.zip"');
-      res.send(zipBuffer);
+      if (fs.existsSync(zipPath)) {
+        console.log(`Found pre-generated zip file: ${zipPath}`);
+        
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', 'attachment; filename="safety_stock_results.zip"');
+        
+        const zipBuffer = fs.readFileSync(zipPath);
+        res.send(zipBuffer);
+      } else {
+        console.log(`Zip file not found: ${zipPath}`);
+        console.log('Available files in results:', fs.existsSync(resultsDir) ? fs.readdirSync(resultsDir) : []);
+        res.status(404).json({ message: 'Results not found' });
+      }
     } catch (error: any) {
+      console.error('Zip download error:', error);
       res.status(400).json({ message: error.message });
     }
   });
@@ -372,14 +301,16 @@ async function processCalculation(id: string) {
     calculation.historyResults = historyResults;
     
     // Save history results to file
+    let historyCsvContent = '';
     if (historyResults.length > 0) {
-      const historyCsv = CSVParser.generateCSV(historyResults);
-      fs.writeFileSync(path.join(resultsDir, 'SAFETY_STOCK_DATA.csv'), historyCsv);
+      historyCsvContent = CSVParser.generateCSV(historyResults);
+      fs.writeFileSync(path.join(resultsDir, 'SAFETY_STOCK_DATA.csv'), historyCsvContent);
     }
 
     console.log(`History results stored for ID: ${id}, count: ${historyResults.length}`);
 
     // If forecast data is provided, calculate forecast-based safety stock
+    let forecastCsvContent = '';
     if (fs.existsSync(forecastFilePath)) {
       calculation.status = 'forecast-calc';
       
@@ -392,11 +323,32 @@ async function processCalculation(id: string) {
       
       // Save forecast results to file
       if (forecastResults.length > 0) {
-        const forecastCsv = CSVParser.generateCSV(forecastResults);
-        fs.writeFileSync(path.join(resultsDir, 'SAFETY_STOCK_FCST_BASED.csv'), forecastCsv);
+        forecastCsvContent = CSVParser.generateCSV(forecastResults);
+        fs.writeFileSync(path.join(resultsDir, 'SAFETY_STOCK_FCST_BASED.csv'), forecastCsvContent);
       }
       
       console.log(`Forecast results stored for ID: ${id}, count: ${forecastResults.length}`);
+    }
+
+    // Create zip file with results
+    const zip = new JSZip();
+    let hasFiles = false;
+
+    if (historyCsvContent) {
+      zip.file('SAFETY_STOCK_DATA.csv', historyCsvContent);
+      hasFiles = true;
+    }
+
+    if (forecastCsvContent) {
+      zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsvContent);
+      hasFiles = true;
+    }
+
+    if (hasFiles) {
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      const zipPath = path.join(resultsDir, 'safety_stock_results.zip');
+      fs.writeFileSync(zipPath, zipBuffer);
+      console.log(`Zip file created at: ${zipPath}`);
     }
 
     // Mark as complete
