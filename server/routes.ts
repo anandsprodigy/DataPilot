@@ -241,9 +241,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const historyFilePath = path.join(resultsDir, 'SAFETY_STOCK_DATA.csv');
         const forecastFilePath = path.join(resultsDir, 'SAFETY_STOCK_FCST_BASED.csv');
         
+        console.log(`Results directory: ${resultsDir}`);
+        console.log(`History file path: ${historyFilePath}`);
+        console.log(`Forecast file path: ${forecastFilePath}`);
         console.log(`Trying to read from files:`, {
           historyExists: fs.existsSync(historyFilePath),
-          forecastExists: fs.existsSync(forecastFilePath)
+          forecastExists: fs.existsSync(forecastFilePath),
+          resultsDirExists: fs.existsSync(resultsDir),
+          resultsDirFiles: fs.existsSync(resultsDir) ? fs.readdirSync(resultsDir) : []
         });
         
         if (fs.existsSync(historyFilePath) || fs.existsSync(forecastFilePath)) {
