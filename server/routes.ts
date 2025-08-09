@@ -5,6 +5,7 @@ import { insertCalculationSchema, type FileUploadResponse, type CalculationProgr
 import { CSVParser } from "./services/csvParser";
 import { SafetyStockCalculator } from "./services/safetyStockCalculator";
 import multer from "multer";
+import JSZip from "jszip";
 
 interface MulterRequest extends Request {
   files?: { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
@@ -161,6 +162,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(csvContent);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Download all results as zip file
+  app.get('/api/download/:id/zip', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const calculation = await storage.getCalculation(id);
+      
+      if (!calculation) {
+        return res.status(404).json({ message: 'Calculation not found' });
+      }
+
+      const zip = new JSZip();
+      let hasFiles = false;
+
+      // Add history results if available
+      if (calculation.historyResults) {
+        const historyData = JSON.parse(calculation.historyResults);
+        const historyCsv = CSVParser.generateCSV(historyData);
+        zip.file('SAFETY_STOCK_DATA.csv', historyCsv);
+        hasFiles = true;
+      }
+
+      // Add forecast results if available
+      if (calculation.forecastResults) {
+        const forecastData = JSON.parse(calculation.forecastResults);
+        const forecastCsv = CSVParser.generateCSV(forecastData);
+        zip.file('SAFETY_STOCK_FCST_BASED.csv', forecastCsv);
+        hasFiles = true;
+      }
+
+      if (!hasFiles) {
+        return res.status(404).json({ message: 'No results found' });
+      }
+
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename="safety_stock_results.zip"');
+      res.send(zipBuffer);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

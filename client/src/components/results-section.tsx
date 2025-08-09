@@ -51,11 +51,33 @@ export function ResultsSection({
   };
 
   const downloadAllResults = async () => {
-    if (historyResults.length > 0) {
-      await downloadResults('history');
-    }
-    if (forecastResults.length > 0) {
-      setTimeout(() => downloadResults('forecast'), 1000);
+    try {
+      const response = await fetch(`/api/download/${calculationId}/zip`);
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'safety_stock_results.zip';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Download started",
+        description: "Both SAFETY_STOCK_DATA.csv and SAFETY_STOCK_FCST_BASED.csv downloaded as zip file",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Failed to download results. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
