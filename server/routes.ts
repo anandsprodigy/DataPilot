@@ -171,11 +171,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/download/:id/zip', async (req, res) => {
     try {
       const { id } = req.params;
+      console.log(`Attempting to download zip for calculation ID: ${id}`);
       const calculation = await storage.getCalculation(id);
       
       if (!calculation) {
+        console.log(`Calculation not found for ID: ${id}`);
         return res.status(404).json({ message: 'Calculation not found' });
       }
+
+      console.log(`Found calculation:`, {
+        id: calculation.id,
+        status: calculation.status,
+        hasHistoryResults: !!calculation.historyResults,
+        hasForecastResults: !!calculation.forecastResults
+      });
 
       const zip = new JSZip();
       let hasFiles = false;
@@ -221,6 +230,8 @@ async function processCalculation(
   forecastData?: any[]
 ) {
   try {
+    console.log(`Starting calculation process for ID: ${id}`);
+    
     // Update status to validation
     await storage.updateCalculation(id, { status: 'validation' });
     
@@ -236,6 +247,8 @@ async function processCalculation(
     await storage.updateCalculation(id, { 
       historyResults: JSON.stringify(historyResults)
     });
+    
+    console.log(`History results stored for ID: ${id}, count: ${historyResults.length}`);
 
     // If forecast data is provided, calculate forecast-based safety stock
     if (forecastData && forecastData.length > 0) {
@@ -246,10 +259,14 @@ async function processCalculation(
       await storage.updateCalculation(id, { 
         forecastResults: JSON.stringify(forecastResults)
       });
+      
+      console.log(`Forecast results stored for ID: ${id}, count: ${forecastResults.length}`);
     }
 
     // Mark as complete
     await storage.updateCalculation(id, { status: 'complete' });
+    
+    console.log(`Calculation completed for ID: ${id}`);
     
   } catch (error) {
     console.error('Calculation error:', error);
