@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               success: true,
               message: `${fieldName} uploaded successfully`,
               recordCount,
-              preview: data.slice(0, 5)
+              preview: data.slice(0, 10)
             };
 
           } catch (parseError: any) {

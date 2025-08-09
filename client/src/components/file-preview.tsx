@@ -97,7 +97,7 @@ export function FilePreview({ files }: FilePreviewProps) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {activeData.preview.slice(0, 5).map((row, index) => (
+                {activeData.preview.slice(0, 10).map((row, index) => (
                   <tr key={index}>
                     {Object.values(row).map((value: any, cellIndex) => (
                       <td
@@ -115,7 +115,7 @@ export function FilePreview({ files }: FilePreviewProps) {
         )}
         
         <div className="mt-3 text-xs text-gray-500 text-center">
-          Showing first 5 rows of {activeData?.recordCount.toLocaleString()} total records
+          Showing first 10 rows of {activeData?.recordCount.toLocaleString()} total records
         </div>
       </CardContent>
     </Card>
