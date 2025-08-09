@@ -66,7 +66,7 @@ export class SafetyStockCalculator {
     // Group history data by item and org
     const grouped = new Map<string, HistoryDataRow[]>();
     for (const row of historyData) {
-      const key = `${row.ITEM_NAME}-${row.ORG_CODE}`;
+      const key = `${row.ITEM_NAME}|${row.ORG_CODE}`;  // Use | instead of - to avoid splitting issues
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }
@@ -77,8 +77,12 @@ export class SafetyStockCalculator {
 
     const results: SafetyStockHistoryResult[] = [];
 
+    // Debug: show sample data from both sources
+    console.log('Sample history data:', historyData.slice(0, 2));
+    console.log('Sample master data:', itemMaster.slice(0, 2));
+
     for (const [key, rows] of Array.from(grouped.entries())) {
-      const [itemName, orgCode] = key.split('-');
+      const [itemName, orgCode] = key.split('|');
       
       console.log(`Processing item: ${itemName}, org: ${orgCode}, rows: ${rows.length}`);
       
@@ -89,6 +93,8 @@ export class SafetyStockCalculator {
       
       if (!masterData) {
         console.log(`No master data found for ${itemName}-${orgCode}`);
+        // Debug: show available master data
+        console.log('Available master items:', itemMaster.map(m => `${m.ITEM_NAME}-${m.ORG_CODE}`));
         continue;
       }
       
@@ -161,7 +167,7 @@ export class SafetyStockCalculator {
     // Group forecast data by item and org
     const grouped = new Map<string, ForecastDataRow[]>();
     for (const row of forecastData) {
-      const key = `${row.ITEM_NAME}-${row.ORG_CODE}`;
+      const key = `${row.ITEM_NAME}|${row.ORG_CODE}`;
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }
@@ -171,7 +177,7 @@ export class SafetyStockCalculator {
     const results: SafetyStockForecastResult[] = [];
 
     for (const [key, rows] of Array.from(grouped.entries())) {
-      const [itemName, orgCode] = key.split('-');
+      const [itemName, orgCode] = key.split('|');
       
       // Find matching master data
       const masterData = itemMaster.find(
