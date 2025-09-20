@@ -1,6 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import cors from "cors";
+import { initDb } from "./db.js";
+import crypto from "crypto";
+import { any } from "zod";
 
 const app = express();
 app.use(express.json());
@@ -35,6 +39,70 @@ app.use((req, res, next) => {
 
   next();
 });
+
+let db: any;
+
+db = await initDb();
+
+// Hash function (SHA256)
+function hashPassword(password: crypto.BinaryLike) {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+// Register API
+app.post("/api/register", async (req, res) => {
+  try {
+    const { firstName, lastName, emailAddress, password } = req.body;
+
+    if (!firstName || !lastName || !emailAddress || !password) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    const hashed = hashPassword(password);
+
+    await db.run(
+      "INSERT INTO users (firstName, lastName, emailAddress, password) VALUES (?, ?, ?, ?)",
+      [firstName , lastName, emailAddress, hashed]
+    );
+
+    res.json({ message: "User registered successfully" });
+  } catch (err: any) {
+    if (err.message.includes("UNIQUE constraint failed")) {
+      return res.status(400).json({ error: "emailAddress already registered" });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Internal server error"+err.message });
+  }
+});
+
+
+// Login API
+app.post("/api/login", async (req, res) => {
+  try {
+    const { emailAddress, password } = req.body;
+
+    if (!emailAddress || !password) {
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
+    const hashed = hashPassword(password);
+
+    const user = await db.get(
+      "SELECT id, firstName, lastName, emailAddress FROM users WHERE emailAddress = ? AND password = ?",
+      [emailAddress, hashed]
+    );
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    res.json({ message: "Login successful", user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 
 (async () => {
   const server = await registerRoutes(app);
