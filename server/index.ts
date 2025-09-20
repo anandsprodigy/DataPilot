@@ -42,7 +42,6 @@ app.use((req, res, next) => {
 
 let db: any;
 
-db = await initDb();
 
 // Hash function (SHA256)
 function hashPassword(password: crypto.BinaryLike) {
@@ -105,6 +104,7 @@ app.post("/api/login", async (req, res) => {
 
 
 (async () => {
+  db = await initDb();
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
