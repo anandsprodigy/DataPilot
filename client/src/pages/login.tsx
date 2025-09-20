@@ -4,11 +4,38 @@ import { FormEvent, useState } from "react";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
     console.log("Login with", email, password);
-    // TODO: Call backend API
+    try {
+        const res = await fetch("api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emailAddress: email, password: password }),
+        });
+  
+        const data = await res.json();
+  
+        if (!res.ok) {
+          setError(data.error || "Login failed");
+        } else {
+          console.log("✅ Login success:", data);
+          // Example: save user in localStorage
+          localStorage.setItem("user", JSON.stringify(data.user));
+          // Navigate to dashboard/home page
+          window.location.href = "/";
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Something went wrong. Please try again.");
+      } finally {
+        setLoading(false);
+      }
   };
 
   return (
@@ -18,6 +45,7 @@ export default function Login() {
         className="bg-white p-8 rounded-2xl shadow-md w-96"
       >
         <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
+        <p className="text-center text-red-600 my-4">{error?error:""}</p>
         <input
           type="email"
           placeholder="Email"
