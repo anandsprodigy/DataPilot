@@ -27,6 +27,10 @@ export default function Login() {
           console.log("✅ Login success:", data);
           // Example: save user in localStorage
           localStorage.setItem("user", JSON.stringify(data.user));
+        // Store user in sessionStorage (session only; cleared when tab closed)
+      // Option A: store entire user object
+      sessionStorage.setItem("user", JSON.stringify(data.user));
+
           // Navigate to dashboard/home page
           window.location.href = "/";
         }
