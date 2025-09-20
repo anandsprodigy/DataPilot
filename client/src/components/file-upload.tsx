@@ -147,18 +147,21 @@ export function FileUpload({ onFilesUploaded, onStartCalculation }: FileUploadPr
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {createDropzone(
-            'historyData',
-            'History Data',
-            'HISTORY_DATA.csv',
-            ['ITEM_NAME', 'ORG_CODE', 'REF_DATE', 'REF_QTY']
-          )}
-          
+
+
           {createDropzone(
             'itemMaster',
             'Item Master',
             'ITEM_MASTER.csv',
             ['ITEM_NAME', 'ORG_CODE', 'LEAD_TIME', 'SUPPLY_LEAD_TIME_VAR_DAYS', 'SERVICE_LEVEL']
+          )}
+
+                    
+          {createDropzone(
+            'historyData',
+            'History Data',
+            'HISTORY_DATA.csv',
+            ['ITEM_NAME', 'ORG_CODE', 'REF_DATE', 'REF_QTY']
           )}
           
           {createDropzone(

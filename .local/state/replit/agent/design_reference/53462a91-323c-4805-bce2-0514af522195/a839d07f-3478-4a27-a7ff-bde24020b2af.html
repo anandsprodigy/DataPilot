@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Stock Calculator - Professional Supply Chain Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1976D2',
+                        secondary: '#424242',
+                        success: '#388E3C',
+                        warning: '#F57C00',
+                        error: '#D32F2F'
+                    },
+                    fontFamily: {
+                        'inter': ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/heroicons@2.0.18/24/outline/index.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .drop-zone { transition: all 0.3s ease; }
+        .drop-zone.drag-over { transform: scale(1.02); }
+        .progress-bar { transition: width 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-inter">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-gray-900">Safety Stock Calculator</h1>
+                        <p class="text-sm text-gray-500">Professional Supply Chain Analytics</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- @COMPONENT: FileUploadSection -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Upload Required Files</h2>
+                    <p class="text-sm text-gray-600">Upload the three CSV files required for safety stock calculations. All files must be provided before processing can begin.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- History Data Upload -->
+                    <div class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary hover:bg-blue-50 transition-all cursor-pointer" data-file-type="history">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <h3 class="text-sm font-medium text-gray-900 mb-1">History Data</h3>
+                        <p class="text-xs text-gray-500 mb-2">HISTORY_DATA.csv</p>
+                        <p class="text-xs text-gray-400">Required columns: ITEM_NAME, ORG_CODE, REF_DATE, REF_QTY</p>
+                        <!-- @STATE: fileUploaded:boolean = false -->
+                        <div class="mt-3 hidden" data-file-status="uploaded">
+                            <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Uploaded
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1" data-mock="true">1,247 records detected</p>
+                        </div>
+                    </div>
+
+                    <!-- Item Master Upload -->
+                    <div class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary hover:bg-blue-50 transition-all cursor-pointer" data-file-type="master">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <h3 class="text-sm font-medium text-gray-900 mb-1">Item Master</h3>
+                        <p class="text-xs text-gray-500 mb-2">ITEM_MASTER.csv</p>
+                        <p class="text-xs text-gray-400">Required columns: ITEM_NAME, ORG_CODE, LEAD_TIME, SUPPLY_LEAD_TIME_VAR_DAYS, SERVICE_LEVEL</p>
+                        <div class="mt-3 hidden" data-file-status="uploaded">
+                            <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Uploaded
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1" data-mock="true">20 items detected</p>
+                        </div>
+                    </div>
+
+                    <!-- Forecast Data Upload -->
+                    <div class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary hover:bg-blue-50 transition-all cursor-pointer" data-file-type="forecast">
+                        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <h3 class="text-sm font-medium text-gray-900 mb-1">Forecast Data</h3>
+                        <p class="text-xs text-gray-500 mb-2">FORECAST_DATA.csv</p>
+                        <p class="text-xs text-gray-400">Required columns: ITEM_NAME, ORG_CODE, REF_DATE, REF_QTY, ERROR_TYPE, FORECAST_ERR_PERCENT</p>
+                        <div class="mt-3 hidden" data-file-status="uploaded">
+                            <div class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Uploaded
+                            </div>
+                            <p class="text-xs text-gray-600 mt-1" data-mock="true">763 forecasts detected</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Upload Actions -->
+                <div class="mt-6 flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        <span data-bind="uploadedCount">0</span> of 3 files uploaded
+                    </div>
+                    <div class="flex space-x-3">
+                        <button class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" data-event="click:clearAllFiles">
+                            Clear All
+                        </button>
+                        <button class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                                data-event="click:startCalculations" disabled data-implementation="Enable when all 3 files uploaded">
+                            Start Calculations
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: FileUploadSection -->
+
+        <!-- @COMPONENT: FilePreviewSection -->
+        <div class="mb-8 hidden" data-section="file-preview">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">File Preview</h2>
+                    <button class="text-sm text-primary hover:text-blue-700 font-medium" data-event="click:togglePreview">
+                        Hide Preview
+                    </button>
+                </div>
+
+                <!-- Preview Tabs -->
+                <div class="border-b border-gray-200 mb-4">
+                    <nav class="-mb-px flex space-x-8">
+                        <button class="py-2 px-1 border-b-2 border-primary text-primary font-medium text-sm" data-tab="history">
+                            History Data
+                        </button>
+                        <button class="py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm" data-tab="master">
+                            Item Master
+                        </button>
+                        <button class="py-2 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm" data-tab="forecast">
+                            Forecast Data
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Preview Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <!-- @MAP: previewHeaders.map(header => ( -->
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-mock="true">
+                                    Item Name
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-mock="true">
+                                    Org Code
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-mock="true">
+                                    Ref Date
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-mock="true">
+                                    Ref Qty
+                                </th>
+                                <!-- @END_MAP )) -->
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <!-- @MAP: previewData.slice(0, 5).map(row => ( -->
+                            <tr data-mock="true">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">ITEM-01</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">M2</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">01/12/2023</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">18,300</td>
+                            </tr>
+                            <tr data-mock="true">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">ITEM-01</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">M3</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">01/12/2023</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">6,000</td>
+                            </tr>
+                            <tr data-mock="true">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">ITEM-01</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">M2</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">01/11/2023</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">16,700</td>
+                            </tr>
+                            <!-- @END_MAP )) -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3 text-xs text-gray-500 text-center">
+                    Showing first 5 rows of <span data-bind="totalRows" data-mock="true">1,247</span> total records
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: FilePreviewSection -->
+
+        <!-- @COMPONENT: CalculationProgressSection -->
+        <div class="mb-8 hidden" data-section="calculation-progress">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Safety Stock Calculations</h2>
+                    <p class="text-sm text-gray-600">Processing your data using advanced statistical models for optimal inventory management.</p>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="space-y-4">
+                    <!-- Data Validation -->
+                    <div class="flex items-center space-x-3" data-step="validation">
+                        <div class="flex-shrink-0 w-8 h-8 bg-success rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">Data Validation</p>
+                            <p class="text-xs text-gray-500">Verifying file structure and data integrity</p>
+                        </div>
+                        <span class="text-xs text-success font-medium">Complete</span>
+                    </div>
+
+                    <!-- History-Based Calculations -->
+                    <div class="flex items-center space-x-3" data-step="history-calc">
+                        <div class="flex-shrink-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">History-Based Safety Stock</p>
+                            <p class="text-xs text-gray-500">Calculating using standard deviation and service factors</p>
+                            <div class="mt-1 w-full bg-gray-200 rounded-full h-1.5">
+                                <div class="progress-bar bg-primary h-1.5 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-primary font-medium">65%</span>
+                    </div>
+
+                    <!-- Forecast-Based Calculations -->
+                    <div class="flex items-center space-x-3" data-step="forecast-calc">
+                        <div class="flex-shrink-0 w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                            <span class="text-xs font-medium text-gray-600">3</span>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-500">Forecast-Based Safety Stock</p>
+                            <p class="text-xs text-gray-400">Calculating using forecast error percentages</p>
+                        </div>
+                        <span class="text-xs text-gray-400 font-medium">Pending</span>
+                    </div>
+
+                    <!-- Generate Reports -->
+                    <div class="flex items-center space-x-3" data-step="generate-reports">
+                        <div class="flex-shrink-0 w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                            <span class="text-xs font-medium text-gray-600">4</span>
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-500">Generate Reports</p>
+                            <p class="text-xs text-gray-400">Creating downloadable CSV files</p>
+                        </div>
+                        <span class="text-xs text-gray-400 font-medium">Pending</span>
+                    </div>
+                </div>
+
+                <!-- Current Status -->
+                <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <svg class="w-5 h-5 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="text-sm text-primary font-medium">Processing history-based calculations...</p>
+                    </div>
+                    <p class="text-xs text-blue-600 mt-1" data-mock="true">Estimated time remaining: 2 minutes</p>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: CalculationProgressSection -->
+
+        <!-- @COMPONENT: ResultsSection -->
+        <div class="hidden" data-section="results">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- History-Based Results -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">History-Based Safety Stock</h3>
+                            <p class="text-sm text-gray-500">Based on historical demand patterns</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Complete
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Items Processed</p>
+                            <p class="text-lg font-semibold text-gray-900" data-mock="true">20</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Avg Days Coverage</p>
+                            <p class="text-lg font-semibold text-gray-900" data-mock="true">14.2</p>
+                        </div>
+                    </div>
+
+                    <!-- Sample Results Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-2 text-left font-medium text-gray-500">Item</th>
+                                    <th class="px-2 py-2 text-left font-medium text-gray-500">Org</th>
+                                    <th class="px-2 py-2 text-right font-medium text-gray-500">Safety Stock</th>
+                                    <th class="px-2 py-2 text-right font-medium text-gray-500">Days Cover</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr data-mock="true">
+                                    <td class="px-2 py-2 text-gray-900">ITEM-01</td>
+                                    <td class="px-2 py-2 text-gray-900">M2</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">1,247</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">12.5</td>
+                                </tr>
+                                <tr data-mock="true">
+                                    <td class="px-2 py-2 text-gray-900">ITEM-01</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">M3</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">2,156</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">15.8</td>
+                                </tr>
+                                <tr data-mock="true">
+                                    <td class="px-2 py-2 text-gray-900">ITEM-03</td>
+                                    <td class="px-2 py-2 text-gray-900">M1</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">892</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">18.2</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="w-full px-4 py-2 text-sm font-medium text-primary bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" 
+                                data-event="click:downloadHistoryResults" data-implementation="Should trigger CSV download">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Download History-Based Results (CSV)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Forecast-Based Results -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Forecast-Based Safety Stock</h3>
+                            <p class="text-sm text-gray-500">Based on forecast error analysis</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                Complete
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Items Processed</p>
+                            <p class="text-lg font-semibold text-gray-900" data-mock="true">18</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Avg Error Rate</p>
+                            <p class="text-lg font-semibold text-gray-900" data-mock="true">10.0%</p>
+                        </div>
+                    </div>
+
+                    <!-- Sample Results Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-2 text-left font-medium text-gray-500">Item</th>
+                                    <th class="px-2 py-2 text-left font-medium text-gray-500">Org</th>
+                                    <th class="px-2 py-2 text-right font-medium text-gray-500">Safety Stock</th>
+                                    <th class="px-2 py-2 text-right font-medium text-gray-500">Days Cover</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr data-mock="true">
+                                    <td class="px-2 py-2 text-gray-900">ITEM-01</td>
+                                    <td class="px-2 py-2 text-gray-900">M1</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">3,421</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">21.4</td>
+                                </tr>
+                                <tr data-mock="true">
+                                    <td class="px-2 py-2 text-gray-900">ITEM-01</td>
+                                    <td class="px-2 py-2 text-gray-900">M3</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">1,876</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">16.2</td>
+                                </tr>
+                                <tr data-mock="true">
+                                    <td class="px-2 py-2 text-gray-900">ITEM-03</td>
+                                    <td class="px-2 py-2 text-gray-900">M3</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">1,024</td>
+                                    <td class="px-2 py-2 text-right text-gray-900">19.8</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4">
+                        <button class="w-full px-4 py-2 text-sm font-medium text-primary bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors" 
+                                data-event="click:downloadForecastResults" data-implementation="Should trigger CSV download">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Download Forecast-Based Results (CSV)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Combined Actions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="text-center">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Calculations Complete</h3>
+                    <p class="text-sm text-gray-600 mb-6">Both safety stock calculations have been completed successfully. You can download the results or start a new calculation.</p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button class="px-6 py-3 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors" 
+                                data-event="click:downloadAllResults" data-implementation="Should download both CSV files as zip">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Download All Results
+                        </button>
+                        <button class="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" 
+                                data-event="click:startNewCalculation" data-implementation="Should reset application to initial state">
+                            Start New Calculation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: ResultsSection -->
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center">
+                <p class="text-sm text-gray-500">© 2024 Safety Stock Calculator. Professional supply chain analytics.</p>
+                <div class="flex space-x-6 mt-4 sm:mt-0">
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Documentation</a>
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-700">Support</a>
+                    <a href="#" class="text-sm text-gray-500 hover:text-gray-700">API</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        (function() {
+            // File upload state management
+            let uploadedFiles = {
+                history: null,
+                master: null,
+                forecast: null
+            };
+
+            // TODO: Implement business logic, API calls, or state management
+            // TODO: Add drag and drop functionality for file uploads
+            // TODO: Add CSV parsing and validation
+            // TODO: Implement safety stock calculation algorithms
+            // TODO: Add progress tracking and real-time updates
+            // TODO: Add file download functionality
+
+            // Demo: Simulate file upload
+            const dropZones = document.querySelectorAll('.drop-zone');
+            dropZones.forEach(zone => {
+                zone.addEventListener('click', function() {
+                    const fileType = this.dataset.fileType;
+                    // Simulate file upload
+                    setTimeout(() => {
+                        const statusDiv = this.querySelector('[data-file-status="uploaded"]');
+                        if (statusDiv) {
+                            statusDiv.classList.remove('hidden');
+                        }
+                        uploadedFiles[fileType] = true;
+                        updateUploadCounter();
+                    }, 500);
+                });
+
+                // Drag and drop visual feedback
+                zone.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+
+                zone.addEventListener('dragleave', function() {
+                    this.classList.remove('drag-over');
+                });
+
+                zone.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+                    // Handle file drop logic here
+                });
+            });
+
+            function updateUploadCounter() {
+                const uploadedCount = Object.values(uploadedFiles).filter(Boolean).length;
+                const counterElement = document.querySelector('[data-bind="uploadedCount"]');
+                if (counterElement) {
+                    counterElement.textContent = uploadedCount;
+                }
+                
+                const startButton = document.querySelector('[data-event="click:startCalculations"]');
+                if (startButton) {
+                    startButton.disabled = uploadedCount < 3;
+                }
+            }
+
+            // Demo: Simulate calculation progress
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('[data-event="click:startCalculations"]')) {
+                    document.querySelector('[data-section="calculation-progress"]').classList.remove('hidden');
+                    // Simulate progress updates
+                    setTimeout(() => {
+                        document.querySelector('[data-section="results"]').classList.remove('hidden');
+                        document.querySelector('[data-section="calculation-progress"]').classList.add('hidden');
+                    }, 3000);
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
