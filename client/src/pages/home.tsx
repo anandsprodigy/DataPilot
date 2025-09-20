@@ -31,7 +31,7 @@ export default function Home() {
     if (!uploadedFiles.historyData || !uploadedFiles.itemMaster) {
       toast({
         title: "Missing required files",
-        description: "Please upload both History Data and Item Master files",
+        description: "Please upload both Historical Data and Item Master files",
         variant: "destructive",
       });
       return;

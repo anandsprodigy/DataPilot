@@ -142,7 +142,7 @@ export function FileUpload({ onFilesUploaded, onStartCalculation }: FileUploadPr
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Upload Required Files</h2>
           <p className="text-sm text-gray-600">
-            Upload the CSV files required for safety stock calculations. History Data and Item Master are required, Forecast Data is optional.
+            Upload the CSV files required for safety stock calculations. Historical Data and Item Master are required, Forecast Data is optional.
           </p>
         </div>
 
@@ -159,7 +159,7 @@ export function FileUpload({ onFilesUploaded, onStartCalculation }: FileUploadPr
                     
           {createDropzone(
             'historyData',
-            'History Data',
+            'Historical Data',
             'HISTORY_DATA.csv',
             ['ITEM_NAME', 'ORG_CODE', 'REF_DATE', 'REF_QTY']
           )}
