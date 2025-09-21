@@ -1,6 +1,7 @@
 import React from "react";
 import { Search, Columns, Zap, Hammer, Code, Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 // ToolsPage.jsx
 // Default-exported React component. TailwindCSS classes are used for styling.
@@ -11,40 +12,46 @@ import { motion } from "framer-motion";
 
 const defaultTools = [
   {
-    id: "formatter",
-    title: "Code Formatter",
+    id: "Safety Stock Calculator",
+    title: "Safety Stock Calculator",
     description: "Automatically formats code (JS/TS/JSON) to a consistent style.",
     icon: "Code",
+    component: "/"
   },
   {
-    id: "minifier",
-    title: "Minifier",
+    id: "Supply Chain Planner",
+    title: "Supply Chain Planner",
     description: "Compresses JS/CSS/HTML files for faster delivery.",
     icon: "Zap",
+    component: "/"
   },
   {
-    id: "inspector",
-    title: "Request Inspector",
+    id: "Min-Max Calculator",
+    title: "Min-Max Calculator",
     description: "Inspect and replay HTTP requests with detailed headers and body.",
     icon: "Columns",
+    component: "<home/>"
   },
   {
     id: "builder",
     title: "Static Builder",
     description: "Build static bundles for production with smart caching.",
     icon: "Hammer",
+    component: "<home/>"
   },
   {
     id: "settings",
     title: "Feature Flags",
     description: "Toggle features per-environment and target audience.",
     icon: "Settings",
+    component: "<home/>"
   },
   {
     id: "searcher",
     title: "Site Search",
     description: "Index and search content with fuzzy matching and filters.",
     icon: "Search",
+    component: "<home/>"
   },
 ];
 
@@ -132,6 +139,7 @@ export default function Tools({ tools = defaultTools }) {
                       <h3 className="text-lg font-medium text-slate-800">{tool.title}</h3>
                       <p className="text-sm text-slate-500 mt-1">{tool.description}</p>
                       <div className="mt-3 text-xs text-slate-400">ID: {tool.id}</div>
+                      <Link to={tool.component}>{tool.title}</Link>
                     </div>
                   </div>
                 </motion.button>
@@ -145,7 +153,7 @@ export default function Tools({ tools = defaultTools }) {
         </main>
 
         <footer className="mt-8 text-sm text-slate-400 flex justify-between">
-          <div>Made with ❤️ — plug your tool routes into the tile click handler.</div>
+          <div className="text-center">Made with ❤️ — plug your tool routes into the tile click handler.</div>
           <div>v1.0</div>
         </footer>
       </div>
