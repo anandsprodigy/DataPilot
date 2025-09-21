@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUpload } from "@/components/file-upload";
 import { FilePreview } from "@/components/file-preview";
 import { CalculationProgress } from "@/components/calculation-progress";
@@ -6,6 +6,7 @@ import { ResultsSection } from "@/components/results-section";
 import { BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { LogOut } from "lucide-react";
 import { type CalculationProgress as CalculationProgressType } from "@shared/schema";
 
 type AppState = 'upload' | 'calculating' | 'results';
@@ -16,12 +17,36 @@ interface UploadedFiles {
   forecastData?: { data: any[]; preview: any[]; recordCount: number };
 }
 
+
+type User = {
+  firstName: string;
+  lastName: string;
+  emailAddress: string;
+};
+
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('upload');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({});
   const [calculationId, setCalculationId] = useState<string>('');
   const [results, setResults] = useState<CalculationProgressType | null>(null);
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+
+
+//manage session
+  useEffect(() => {
+    const stored = sessionStorage.getItem("user");
+    if (stored) {
+      setUser(JSON.parse(stored));
+    } else {
+      // no session → redirect to login
+      window.location.href = "/login";
+    }
+  }, []);
+
+  if (!user) {
+    return <div className="min-h-screen flex justify-center items-center text-2xl">Loading...</div>;
+  }
 
   const handleFilesUploaded = (files: UploadedFiles) => {
     setUploadedFiles(files);
@@ -78,7 +103,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen font-inter">
+    <div className="bg-gray-50 min-h-screen font-inter h-screen">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -92,7 +117,15 @@ export default function Home() {
                 <p className="text-sm text-gray-500">Professional Supply Chain Analytics</p>
               </div>
             </div>
+            <div className="flex justify-baseline items-center">
+                <p className="mx-4">{user?user.firstName.toUpperCase()+" "+user.lastName.toUpperCase():"Not Logged In"}</p>
+                <button type="button" className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"         onClick={() => {
+                    sessionStorage.clear();
+                    window.location.href = "/login";
+                    }}>LogOut</button>
           </div>
+          </div>
+
         </div>
       </header>
 
