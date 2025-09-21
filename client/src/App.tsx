@@ -7,11 +7,13 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
+import Tools from "./pages/Tools";
 
 function Router() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/tools" element={<Tools />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route element={<NotFound />} />
