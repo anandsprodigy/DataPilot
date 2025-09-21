@@ -1,10 +1,11 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { type Request, Response, NextFunction, response } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import { initDb } from "./db.js";
 import crypto from "crypto";
 import { any } from "zod";
+import { request } from "http";
 
 const app = express();
 app.use(express.json());
@@ -74,6 +75,10 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
+app.get("/api/health", async(request, response)=>{
+  response.send("abhi jinda hu").status(200);
+})
+
 
 // Login API
 app.post("/api/login", async (req, res) => {
@@ -84,12 +89,15 @@ app.post("/api/login", async (req, res) => {
       return res.status(400).json({ error: "Email and password required" });
     }
 
+    console.log(emailAddress+" "+password)
+
     const hashed = hashPassword(password);
 
     const user = await db.get(
       "SELECT id, firstName, lastName, emailAddress FROM users WHERE emailAddress = ? AND password = ?",
       [emailAddress, hashed]
     );
+
 
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });

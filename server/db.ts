@@ -1,13 +1,19 @@
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import path from "path";
+import { error } from "console";
 
 // Open connection to SQLite DB (creates file if not exists)
 export async function initDb() {
+
+
+
   
-  const db = await open({
+  const db: any = await open({
     filename: "./server/db/database.db",
     driver: sqlite3.Database,
+  }).catch(error => {
+    console.log(error);
   });
 
   // Create users table if not exists

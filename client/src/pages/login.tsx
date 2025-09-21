@@ -18,8 +18,12 @@ export default function Login() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ emailAddress: email, password: password }),
         });
-  
+
+        console.log("break")
+
         const data = await res.json();
+
+        console.log(data);
   
         if (!res.ok) {
           setError(data.error || "Login failed");
@@ -36,7 +40,7 @@ export default function Login() {
         }
       } catch (err) {
         console.error(err);
-        setError("Something went wrong. Please try again.");
+        setError("Something went wrong. Please try again."+ err);
       } finally {
         setLoading(false);
       }
@@ -49,7 +53,7 @@ export default function Login() {
         className="bg-white p-8 rounded-2xl shadow-md w-96"
       >
         <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-        <p className="text-center text-red-600 my-4">{error?error:""}</p>
+        <p className="text-center text-red-600 my-4">{error?error:""}{loading}</p>
         <input
           type="email"
           placeholder="Email"
