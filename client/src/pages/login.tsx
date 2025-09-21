@@ -36,7 +36,7 @@ export default function Login() {
       sessionStorage.setItem("user", JSON.stringify(data.user));
 
           // Navigate to dashboard/home page
-          window.location.href = "/";
+          window.location.href = "/tools";
         }
       } catch (err) {
         console.error(err);

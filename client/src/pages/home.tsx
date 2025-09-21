@@ -8,15 +8,16 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { LogOut } from "lucide-react";
 import { type CalculationProgress as CalculationProgressType } from "@shared/schema";
+import Footer from "@/components/footer";
+import Header from "@/components/header";
 
-type AppState = 'upload' | 'calculating' | 'results';
+type AppState = "upload" | "calculating" | "results";
 
 interface UploadedFiles {
   historyData?: { data: any[]; preview: any[]; recordCount: number };
   itemMaster?: { data: any[]; preview: any[]; recordCount: number };
   forecastData?: { data: any[]; preview: any[]; recordCount: number };
 }
-
 
 type User = {
   firstName: string;
@@ -25,15 +26,14 @@ type User = {
 };
 
 export default function Home() {
-  const [appState, setAppState] = useState<AppState>('upload');
+  const [appState, setAppState] = useState<AppState>("upload");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({});
-  const [calculationId, setCalculationId] = useState<string>('');
+  const [calculationId, setCalculationId] = useState<string>("");
   const [results, setResults] = useState<CalculationProgressType | null>(null);
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
 
-
-//manage session
+  //manage session
   useEffect(() => {
     const stored = sessionStorage.getItem("user");
     if (stored) {
@@ -45,7 +45,11 @@ export default function Home() {
   }, []);
 
   if (!user) {
-    return <div className="min-h-screen flex justify-center items-center text-2xl">Loading...</div>;
+    return (
+      <div className="min-h-screen flex justify-center items-center text-2xl">
+        Loading...
+      </div>
+    );
   }
 
   const handleFilesUploaded = (files: UploadedFiles) => {
@@ -63,16 +67,16 @@ export default function Home() {
     }
 
     try {
-      const response = await apiRequest('POST', '/api/calculate', {
+      const response = await apiRequest("POST", "/api/calculate", {
         historyData: uploadedFiles.historyData.data,
         itemMaster: uploadedFiles.itemMaster.data,
-        forecastData: uploadedFiles.forecastData?.data || []
+        forecastData: uploadedFiles.forecastData?.data || [],
       });
 
       const data = await response.json();
       setCalculationId(data.calculationId);
-      setAppState('calculating');
-      
+      setAppState("calculating");
+
       toast({
         title: "Calculation started",
         description: "Safety stock calculations are now processing",
@@ -88,7 +92,7 @@ export default function Home() {
 
   const handleCalculationComplete = (progress: CalculationProgressType) => {
     setResults(progress);
-    setAppState('results');
+    setAppState("results");
     toast({
       title: "Calculations complete",
       description: "All safety stock calculations have finished successfully",
@@ -96,43 +100,19 @@ export default function Home() {
   };
 
   const startNewCalculation = () => {
-    setAppState('upload');
+    setAppState("upload");
     setUploadedFiles({});
-    setCalculationId('');
+    setCalculationId("");
     setResults(null);
   };
 
   return (
     <div className="bg-gray-50 min-h-screen font-inter h-screen">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">Safety Stock Calculator</h1>
-                <p className="text-sm text-gray-500">Professional Supply Chain Analytics</p>
-              </div>
-            </div>
-            <div className="flex justify-baseline items-center">
-                <p className="mx-4">{user?user.firstName.toUpperCase()+" "+user.lastName.toUpperCase():"Not Logged In"}</p>
-                <button type="button" className="text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-300 font-medium rounded-full text-sm px-5 py-2.5 text-center me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900"         onClick={() => {
-                    sessionStorage.clear();
-                    window.location.href = "/login";
-                    }}>LogOut</button>
-          </div>
-          </div>
-
-        </div>
-      </header>
-
+      <Header />
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* File Upload Section */}
-        {appState === 'upload' && (
+        {appState === "upload" && (
           <>
             <FileUpload
               onFilesUploaded={handleFilesUploaded}
@@ -143,7 +123,7 @@ export default function Home() {
         )}
 
         {/* Calculation Progress Section */}
-        {appState === 'calculating' && (
+        {appState === "calculating" && (
           <CalculationProgress
             calculationId={calculationId}
             onComplete={handleCalculationComplete}
@@ -151,7 +131,7 @@ export default function Home() {
         )}
 
         {/* Results Section */}
-        {appState === 'results' && results && (
+        {appState === "results" && results && (
           <ResultsSection
             calculationId={calculationId}
             historyResults={results.historyResults}
@@ -161,19 +141,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16 bottom-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center">
-            <p className="text-sm text-gray-500">©{new Date().getFullYear()} Copyrights reserved.</p>
-            <div className="flex space-x-6 mt-4 sm:mt-0">
-              {/* <a href="#" className="text-sm text-gray-500 hover:text-gray-700">Documentation</a>
-              <a href="#" className="text-sm text-gray-500 hover:text-gray-700">Support</a>
-              <a href="#" className="text-sm text-gray-500 hover:text-gray-700">API</a> */}
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
