@@ -142,7 +142,7 @@ export class SafetyStockCalculator {
 
       const msPerDay = 1000 * 60 * 60 * 24;
       // Python used (MAX_MONTH_END - min).dt.days (integer), so use floor
-      const durationDays = Math.floor((maxMonthEnd.getTime() - minDate.getTime()) / msPerDay);
+      const durationDays = Math.ceil((maxMonthEnd.getTime() - minDate.getTime()) / msPerDay); //Ashish-just using the ceil
 
       if (durationDays <= 0) {
         console.warn('Non-positive durationDays', { itemName, orgCode, durationDays, minDate, maxMonthEnd });
