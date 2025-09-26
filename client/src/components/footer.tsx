@@ -9,7 +9,7 @@ export default function Footer() {
           </p>
           <div className="flex space-x-6 mt-4 sm:mt-0">
             <div className="text-center">
-              Made with ❤️ — plug your tool routes into the tile click handler.
+              Made with ❤️ — Toolbox.
             </div>
             <div>v1.0</div>
           </div>
