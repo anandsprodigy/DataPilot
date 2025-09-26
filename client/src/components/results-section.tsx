@@ -140,14 +140,14 @@ export function ResultsSection({
                     {historyResults.length}
                   </p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                {/* <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wide">
                     Avg Days Coverage
                   </p>
                   <p className="text-lg font-semibold text-gray-900">
                     {historyAvgDays}
                   </p>
-                </div>
+                </div> */}
               </div>
 
               {/* Sample Results Table */}
@@ -233,14 +233,14 @@ export function ResultsSection({
                     {forecastResults.length}
                   </p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
+                {/* <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase tracking-wide">
                     Avg Error Rate
                   </p>
                   <p className="text-lg font-semibold text-gray-900">
                     {forecastAvgError}%
                   </p>
-                </div>
+                </div> */}
               </div>
 
               {/* Sample Results Table */}
