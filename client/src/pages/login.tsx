@@ -75,7 +75,7 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <p onClick={addCredentails}>Add Credentials</p>
+        <p onClick={addCredentails} className="m-4 text-center">Add Credentials</p>
         <button
           type="submit"
           className="w-full bg-blue-600 text-white p-3 rounded hover:bg-blue-700"
