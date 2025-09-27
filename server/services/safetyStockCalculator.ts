@@ -142,7 +142,7 @@ export class SafetyStockCalculator {
 
       const msPerDay = 1000 * 60 * 60 * 24;
       // Python used (MAX_MONTH_END - min).dt.days (integer), so use floor
-      const durationDays = Math.ceil((maxMonthEnd.getTime() - minDate.getTime()) / msPerDay); //Ashish-just using the ceil
+      const durationDays = Math.floor((maxMonthEnd.getTime() - minDate.getTime()) / msPerDay); //Ashish-just using the ceil
 
       if (durationDays <= 0) {
         console.warn('Non-positive durationDays', { itemName, orgCode, durationDays, minDate, maxMonthEnd });
@@ -174,7 +174,7 @@ export class SafetyStockCalculator {
       // population std-dev (divide by N) to match np.std default
       const n = samples.length;
       const mean = n ? (samples.reduce((s, v) => s + v, 0) / n) : 0;
-      const variance = n ? (samples.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n) : 0;
+      const variance = Math.ceil(n ? (samples.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n) : 0); //Trying with the sample 
       const stdDev = Math.sqrt(variance);
 
       const serviceLevelFrac = (Number(master.SERVICE_LEVEL) || 0) / 100;
@@ -213,6 +213,7 @@ export class SafetyStockCalculator {
         totalQty,
         avgDailyQty,
         samplesCount: n,
+        variance:variance,
         stdDev,
         ssSup,
         ssDemand,
