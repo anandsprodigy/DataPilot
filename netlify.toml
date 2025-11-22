@@ -1,16 +1,45 @@
+functionsDirectory = "/opt/build/repo/netlify/functions"
+functionsDirectoryOrigin = "default"
+redirectsOrigin = "config"
+plugins = []
+headers = []
 
+[build]
+publish = "/opt/build/repo/dist/public"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "npm run build"
+functions = "/opt/build/repo/netlify/functions"
+
+  [build.environment]
+
+  [build.processing]
+
+    [build.processing.css]
+
+    [build.processing.html]
+
+    [build.processing.images]
+
+    [build.processing.js]
+
+  [build.services]
 
 [dev]
-  command = "npm run dev"
+command = "npm run dev"
+
+[functions]
+
+  [functions."*"]
 
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
+from = "/*"
+to = "/index.html"
+status = 200
+force = true
 
-  [build]
-  base = "client"
-  command = "npm run build"
-  publish = "dist"
+  [redirects.query]
 
+  [redirects.conditions]
+
+  [redirects.headers]
