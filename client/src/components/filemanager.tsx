@@ -2,50 +2,13 @@ import React, { useEffect, useState, useRef } from "react";
 import type { FC } from "react";
 import { Download, Upload, Trash2, Edit2, FolderPlus, FileText } from "lucide-react";
 
-/*
-  FileManager Component
-
-  Features:
-  - List files on a configurable remote path
-  - Upload files (drag & drop + select)
-  - Rename files
-  - Delete files (with confirmation)
-  - Download files; sends `targetFolder` to server so backend can place the file into a particular folder
-
-  Notes for integration (frontend only):
-  - This component expects a backend exposing REST endpoints. You can adapt URLs or provide your own fetch wrappers.
-
-  Expected endpoints (examples):
-  GET  `${apiBaseUrl}/list?path=${encodeURIComponent(path)}`
-    response: { files: Array<{ name: string, size: number, modifiedAt: string }> }
-
-  POST `${apiBaseUrl}/upload?path=${encodeURIComponent(path)}`
-    FormData with files -> returns uploaded file list or success
-
-  POST `${apiBaseUrl}/rename`
-    body: { path, oldName, newName }
-
-  DELETE `${apiBaseUrl}/delete`
-    body: { path, name }
-
-  GET `${apiBaseUrl}/download?path=${encodeURIComponent(pathToFile)}&target=${encodeURIComponent(targetFolder)}`
-    -> backend should return a file stream or a JSON result depending on implementation. This component assumes the backend will either
-       stream the file (and browser will download) OR perform server-side copy to `target` and return { success: true }.
-
-  If you don't have a backend yet, the component can be adapted to accept function props instead of `apiBaseUrl`.
-*/
-
-type FileItem = {
-  name: string;
-  size: number; // bytes
-  modifiedAt?: string;
-};
+type FileItem = { name: string; size: number; modifiedAt?: string };
 
 type Props = {
-  apiBaseUrl: string; // base url where file endpoints live (no trailing slash)
-  basePath?: string; // remote folder path that this view manages, default: '/'
-  downloadTargetFolder?: string; // optional path to request when downloading (sent to server)
-  pollIntervalMs?: number | null; // if provided, periodically refresh list
+  apiBaseUrl: string;
+  basePath?: string;
+  downloadTargetFolder?: string;
+  pollIntervalMs?: number | null;
 };
 
 const humanFileSize = (size: number) => {
@@ -88,7 +51,6 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
     }
   }, [apiBaseUrl, basePath]);
 
-  // Upload handler
   const handleFiles = async (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
     setUploading(true);
@@ -114,22 +76,24 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Drag & drop
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
+
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
       if (e.dataTransfer) handleFiles(e.dataTransfer.files);
     };
     const onDragOver = (e: DragEvent) => e.preventDefault();
-    el.addEventListener('drop', onDrop as any);
-    el.addEventListener('dragover', onDragOver as any);
+
+    el.addEventListener('drop', onDrop as unknown as EventListener);
+    el.addEventListener('dragover', onDragOver as unknown as EventListener);
+
     return () => {
-      el.removeEventListener('drop', onDrop as any);
-      el.removeEventListener('dragover', onDragOver as any);
+      el.removeEventListener('drop', onDrop as unknown as EventListener);
+      el.removeEventListener('dragover', onDragOver as unknown as EventListener);
     };
-  }, [dropRef.current]);
+  }, []);
 
   const startRename = (file: FileItem) => {
     setRenameTarget(file);
@@ -158,7 +122,8 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
   };
 
   const doDelete = async (file: FileItem) => {
-    if (!confirm(`Delete ${file.name}? This cannot be undone.`)) return;
+    const confirmed = typeof window !== 'undefined' ? window.confirm(`Delete ${file.name}? This cannot be undone.`) : true;
+    if (!confirmed) return;
     setLoading(true);
     setError(null);
     try {
@@ -180,15 +145,12 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
     setLoading(true);
     setError(null);
     try {
-      // We request the server to either stream the file back or to copy it to `downloadTargetFolder` server-side.
-      // If the server returns a stream, we'll force a browser download. If it returns JSON success, we show a message.
-      const url = `${apiBaseUrl}/download?path=${encodeURIComponent(basePath + '/' + file.name)}${downloadTargetFolder ? `&target=${encodeURIComponent(downloadTargetFolder)}` : ''}`;
+      const url = `${apiBaseUrl}/download?path=${encodeURIComponent(basePath.replace(/\/+$/,'') + '/' + file.name)}${downloadTargetFolder ? `&target=${encodeURIComponent(downloadTargetFolder)}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
 
       const contentType = res.headers.get('content-type') || '';
       const disposition = res.headers.get('content-disposition') || '';
-      // If server streamed a file, use blob download
       if (contentType.includes('application/octet-stream') || disposition.includes('attachment')) {
         const blob = await res.blob();
         const href = URL.createObjectURL(blob);
@@ -200,12 +162,10 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
         a.remove();
         URL.revokeObjectURL(href);
       } else {
-        // otherwise attempt to parse JSON and show message (server-side copy)
         const json = await res.json();
         if (json && json.success) {
-          alert(json.message || 'Download/copy initiated on server');
+          if (typeof window !== 'undefined') window.alert(json.message || 'Download/copy initiated on server');
         } else {
-          // fallback: try to convert to blob and download
           const blob = await res.blob();
           const href = URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -239,7 +199,7 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
       </div>
 
       <div ref={dropRef} className="border-2 border-dashed border-gray-200 rounded-lg p-4 mb-4 text-center">
-        <div className="text-sm">Drag & drop files here to upload, or click <button onClick={() => fileInputRef.current?.click()} className="underline">choose files</button></div>
+        <div className="text-sm">Drag & drop files here to upload, or click <button  onClick={() => fileInputRef.current?.click()} className="underline">choose files</button></div>
       </div>
 
       {error && <div className="text-red-600 mb-2">{error}</div>}
@@ -285,7 +245,6 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
         </table>
       </div>
 
-      {/* Rename modal (simple) */}
       {renameTarget && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-lg p-4 w-96 shadow-lg">
@@ -305,16 +264,3 @@ const FileManager: FC<Props> = ({ apiBaseUrl, basePath = '/', downloadTargetFold
 };
 
 export default FileManager;
-
-/*
-  Usage example:
-
-  <FileManager
-    apiBaseUrl="https://api.example.com/files" 
-    basePath="/user-uploads/project-A"
-    downloadTargetFolder="/staging/downloads"
-    pollIntervalMs={30000}
-  />
-
-  If you prefer to use function props instead of apiBaseUrl, adapt the component to accept callbacks for list/upload/rename/delete/download.
-*/

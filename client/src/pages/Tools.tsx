@@ -1,7 +1,7 @@
 import React from "react";
 import { Search, Columns, Zap, Hammer, Code, Settings } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Footer from "@/components/footer";
 import Header from "@/components/header";
 
@@ -32,9 +32,9 @@ const defaultTools = [
     id: "Min-Max Calculator",
     title: "Min-Max Calculator",
     description:
-      "Inspect and replay HTTP requests with detailed headers and body.",
+      "Calculate minimum (reorder point) and maximum stock levels based on safety stock.",
     icon: "Columns",
-    component: "<home/>",
+    component: "/min-max-calculator",
   },
   {
     id: "builder",
@@ -70,6 +70,7 @@ const IconMap = {
 
 export default function Tools({ tools = defaultTools }) {
   const [query, setQuery] = React.useState("");
+  const navigate = useNavigate();
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -141,9 +142,11 @@ export default function Tools({ tools = defaultTools }) {
                     whileTap={{ scale: 0.98 }}
                     className="w-full text-left bg-white rounded-2xl p-5 shadow-sm hover:shadow-md border border-transparent hover:border-slate-100 transition-all"
                     onClick={() => {
-                      // Placeholder: integrate your router or onOpen callback
-                      // Example: navigate(`/tools/${tool.id}`)
-                      console.log("Open tool", tool.id);
+                      if (tool.component && tool.component.startsWith("/")) {
+                        navigate(tool.component);
+                      } else {
+                        console.log("Open tool", tool.id);
+                      }
                     }}
                   >
                     <div className="flex items-start gap-4">
@@ -160,7 +163,6 @@ export default function Tools({ tools = defaultTools }) {
                         <div className="mt-3 text-xs text-slate-400">
                           ID: {tool.id}
                         </div>
-                        <Link to={tool.component}>{tool.title}</Link>
                       </div>
                     </div>
                   </motion.button>

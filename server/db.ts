@@ -1,19 +1,24 @@
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import path from "path";
-import { error } from "console";
+import fs from "fs";
 
 // Open connection to SQLite DB (creates file if not exists)
 export async function initDb() {
+  // Ensure db directory exists
+  const dbDir = path.join(process.cwd(), "server", "db");
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
 
-
-
+  const dbPath = path.join(dbDir, "database.db");
   
   const db: any = await open({
-    filename: "./server/db/database.db",
+    filename: dbPath,
     driver: sqlite3.Database,
-  }).catch(error => {
-    console.log(error);
+  }).catch((error) => {
+    console.error("Database connection error:", error);
+    throw error;
   });
 
   // Create users table if not exists

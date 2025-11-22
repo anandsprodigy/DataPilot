@@ -28,6 +28,41 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // React and core libraries
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
+            return 'react-vendor';
+          }
+          // Radix UI components
+          if (id.includes('node_modules/@radix-ui')) {
+            return 'radix-vendor';
+          }
+          // Data and state management
+          if (id.includes('node_modules/@tanstack/react-query') || id.includes('node_modules/zod')) {
+            return 'data-vendor';
+          }
+          // Chart library
+          if (id.includes('node_modules/recharts')) {
+            return 'chart-vendor';
+          }
+          // Animation library
+          if (id.includes('node_modules/framer-motion')) {
+            return 'animation-vendor';
+          }
+          // Icons
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons-vendor';
+          }
+          // Other large vendor libraries
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+        chunkSizeWarningLimit: 600,
+      },
+    },
   },
  
   server: {

@@ -48,6 +48,8 @@ export interface ItemMasterRow {
   SUPPLY_LEAD_TIME_VAR_DAYS: number;
   SERVICE_LEVEL: number;
   LEAD_TIME: number;
+  MIN_QUANTITY_LEVEL?: number;
+  MAX_QUANTITY_LEVEL?: number;
 }
 
 export interface ForecastDataRow {
@@ -57,6 +59,16 @@ export interface ForecastDataRow {
   REF_QTY: number;
   ERROR_TYPE: string;
   FORECAST_ERR_PERCENT: number;
+}
+
+export interface SupplyDemandDataRow {
+  ORDER_GROUP: string;
+  ITEM_NAME: string;
+  ORG_CODE: string;
+  ORDER_TYPE: string;
+  ORDER_QUANTITY: number;
+  OLD_DUE_DATE: string;
+  SUGG_DUE_DATE: string;
 }
 
 export interface SafetyStockHistoryResult {
@@ -99,4 +111,18 @@ export interface CalculationProgress {
   message: string;
   historyResults?: SafetyStockHistoryResult[];
   forecastResults?: SafetyStockForecastResult[];
+}
+
+export interface MinMaxResult {
+  ITEM_NAME: string;
+  ORG_CODE: string;
+  AVERAGE_DAILY_QTY: number;
+  LEAD_TIME: number;
+  SAFETY_STOCK: number;
+  MIN_LEVEL: number; // Reorder Point
+  MAX_LEVEL: number; // Maximum Stock Level
+  ORDER_QUANTITY: number; // Max - Min
+  REVIEW_PERIOD_DAYS?: number;
+  TOTAL_ORDERS?: number;
+  TOTAL_ORDER_QUANTITY?: number;
 }

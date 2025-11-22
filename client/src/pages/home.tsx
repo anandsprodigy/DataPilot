@@ -10,6 +10,7 @@ import { LogOut } from "lucide-react";
 import { type CalculationProgress as CalculationProgressType } from "@shared/schema";
 import Footer from "@/components/footer";
 import Header from "@/components/header";
+import FileManager from "@/components/filemanager";
 
 type AppState = "upload" | "calculating" | "results";
 
@@ -142,6 +143,7 @@ export default function Home() {
       </main>
 
       <Footer />
+      <FileManager apiBaseUrl="/result"/>
     </div>
   );
 }

@@ -26,8 +26,12 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Explicitly set root to ensure correct path resolution in middleware mode
+  const clientRoot = path.resolve(import.meta.dirname, "..", "client");
+  
   const vite = await createViteServer({
     ...viteConfig,
+    root: clientRoot,
     configFile: false,
     customLogger: {
       ...viteLogger,
@@ -40,8 +44,21 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
-  app.use(vite.middlewares);
+  // Only use Vite middleware for non-API routes
+  app.use((req, res, next) => {
+    // Skip API routes completely - don't process them through Vite
+    if (req.path.startsWith("/api/") || req.originalUrl.startsWith("/api/")) {
+      return next();
+    }
+    vite.middlewares(req, res, next);
+  });
+  
   app.use("*", async (req, res, next) => {
+    // Skip API routes - let them be handled by Express routes
+    if (req.originalUrl.startsWith("/api/") || req.path.startsWith("/api/")) {
+      return next();
+    }
+
     const url = req.originalUrl;
 
     try {
