@@ -143,7 +143,7 @@ export default function Home() {
       </main>
 
       <Footer />
-      <FileManager apiBaseUrl="/result"/>
+      
     </div>
   );
 }
