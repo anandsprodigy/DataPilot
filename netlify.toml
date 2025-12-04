@@ -4,6 +4,7 @@
 
 [dev]
   command = "npm run dev"
+  
 
 [[redirects]]
   from = "/*"
