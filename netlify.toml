@@ -3,7 +3,7 @@
   publish = "dist/public"
 
 [dev]
-  command = "npm run dev"
+  command = "cross-env NODE_ENV=development tsx server/index.ts"
   
 
 [[redirects]]
