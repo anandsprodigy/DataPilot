@@ -11,6 +11,7 @@ import multer from "multer";
 import JSZip from "jszip";
 import fs from "fs";
 import path from "path";
+import { gzipSync, brotliCompressSync } from "zlib";
 
 interface MulterRequest extends Request {
   files?:
@@ -569,6 +570,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Min-Max download error:", error);
       res.status(400).json({ message: error.message });
     }
+  });
+
+  const featureFlags: Record<string, boolean> = {
+    safetyStock: true,
+    supplyPlanner: true,
+    minMax: true,
+    experimentalCharts: false,
+  };
+
+  type SearchDoc = { id: string; title: string; content: string; tags?: string[] };
+  const searchIndex: SearchDoc[] = [];
+  let lastBuild: { id: string; time: string; manifest: Record<string, string> } | null = null;
+
+  app.post("/api/tools/format", async (req, res) => {
+    try {
+      const { language, content } = req.body || {};
+      if (typeof content !== "string") {
+        return res.status(400).json({ error: "content must be a string" });
+      }
+      let formatted = content;
+      let linesChanged = 0;
+      if (String(language).toLowerCase() === "json") {
+        const obj = JSON.parse(content);
+        formatted = JSON.stringify(obj, null, 2);
+      } else {
+        const originalLines = content.replace(/\r\n/g, "\n").split("\n");
+        const formattedLines = originalLines.map((line) => line.replace(/\s+$/g, "").replace(/\t/g, "  "));
+        formatted = formattedLines.join("\n");
+        linesChanged = formattedLines.filter((l, i) => l !== originalLines[i]).length;
+      }
+      res.json({ success: true, formatted, stats: { originalLength: content.length, formattedLength: formatted.length, linesChanged } });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/tools/compress", async (req, res) => {
+    try {
+      const { type, content } = req.body || {};
+      if (typeof content !== "string") {
+        return res.status(400).json({ error: "content must be a string" });
+      }
+      const buf = Buffer.from(content, "utf8");
+      const gz = gzipSync(buf);
+      const br = brotliCompressSync(buf);
+      res.json({ success: true, sizes: { original: buf.length, gzip: gz.length, brotli: br.length }, gzipBase64: gz.toString("base64"), brotliBase64: br.toString("base64"), type: type || "text" });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/tools/minmax/demo", async (_req, res) => {
+    const avgDaily = 20;
+    const leadTime = 5;
+    const reviewDays = 30;
+    const safety = 50;
+    const minLevel = Math.ceil(safety + avgDaily * leadTime);
+    const orderQty = Math.ceil(avgDaily * reviewDays);
+    const maxLevel = Math.ceil(minLevel + orderQty);
+    res.json({ success: true, results: [{ ITEM_NAME: "DEMO-ITEM", ORG_CODE: "ORG", AVERAGE_DAILY_QTY: avgDaily, LEAD_TIME: leadTime, SAFETY_STOCK: safety, MIN_LEVEL: minLevel, MAX_LEVEL: maxLevel, ORDER_QUANTITY: orderQty, REVIEW_PERIOD_DAYS: reviewDays }] });
+  });
+
+  app.post("/api/tools/builder/run", async (req, res) => {
+    const { entries } = req.body || {};
+    const list: string[] = Array.isArray(entries) && entries.length > 0 ? entries : ["index.js", "style.css"];
+    const id = generateId();
+    const ts = new Date().toISOString();
+    const manifest: Record<string, string> = {};
+    for (const e of list) {
+      const base = String(e).replace(/[^a-zA-Z0-9.]/g, "").split(".")[0];
+      manifest[e] = `${base}-${id.slice(0, 8)}.js`;
+    }
+    lastBuild = { id, time: ts, manifest };
+    res.json({ success: true, buildId: id, time: ts, manifest });
+  });
+
+  app.get("/api/tools/builder/status", async (_req, res) => {
+    if (!lastBuild) {
+      return res.json({ status: "idle" });
+    }
+    res.json({ status: "complete", ...lastBuild });
+  });
+
+  app.get("/api/flags", async (_req, res) => {
+    res.json({ flags: featureFlags });
+  });
+
+  app.post("/api/flags", async (req, res) => {
+    const { updates } = req.body || {};
+    if (!updates || typeof updates !== "object") {
+      return res.status(400).json({ error: "updates object required" });
+    }
+    for (const [k, v] of Object.entries(updates as Record<string, any>)) {
+      featureFlags[k] = !!v;
+    }
+    res.json({ flags: featureFlags });
+  });
+
+  app.post("/api/search/index", async (req, res) => {
+    const { documents } = req.body || {};
+    if (!Array.isArray(documents)) {
+      return res.status(400).json({ error: "documents must be an array" });
+    }
+    let indexed = 0;
+    for (const d of documents) {
+      if (d && typeof d.title === "string" && typeof d.content === "string") {
+        const id = (d as any).id || generateId();
+        const tags = Array.isArray((d as any).tags) ? (d as any).tags : undefined;
+        searchIndex.push({ id, title: d.title, content: d.content, tags });
+        indexed++;
+      }
+    }
+    res.json({ success: true, indexed, total: searchIndex.length });
+  });
+
+  app.post("/api/search/query", async (req, res) => {
+    const { q, tags } = req.body || {};
+    const query = String(q || "").toLowerCase();
+    const filterTags = Array.isArray(tags) ? (tags as any[]).map((x) => String(x).toLowerCase()) : null;
+    const results = searchIndex
+      .map((doc) => {
+        let score = 0;
+        const titleLower = doc.title.toLowerCase();
+        const contentLower = doc.content.toLowerCase();
+        if (query && titleLower.includes(query)) score += 2;
+        if (query && contentLower.includes(query)) score += 1;
+        if (filterTags && doc.tags) {
+          const docTagsLower = doc.tags.map((x) => String(x).toLowerCase());
+          for (const t of filterTags) {
+            if (docTagsLower.includes(t)) score += 1;
+          }
+        }
+        const idx = query ? contentLower.indexOf(query) : 0;
+        const start = Math.max(0, idx - 40);
+        const snippet = doc.content.slice(start, start + 120);
+        return { id: doc.id, title: doc.title, score, snippet, tags: doc.tags || [] };
+      })
+      .filter((r) => r.score > 0 || !query)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+    res.json({ success: true, results });
   });
 
   const httpServer = createServer(app);

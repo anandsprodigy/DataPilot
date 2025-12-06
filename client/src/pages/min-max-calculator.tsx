@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Footer from "@/components/footer";
 import Header from "@/components/header";
-import { Download, Calculator, FileSpreadsheet } from "lucide-react";
+import { Download, Calculator, FileSpreadsheet, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ interface MinMaxUploadedFiles {
 }
 
 export default function MinMaxCalculator() {
+  const navigate = useNavigate();
   const [uploadedFiles, setUploadedFiles] = useState<MinMaxUploadedFiles>({});
   const [reviewPeriodDays, setReviewPeriodDays] = useState(30);
   const [useSupplyDemandData, setUseSupplyDemandData] = useState(true);
@@ -158,6 +159,12 @@ async function apiRequest<T = any>(
     <div className="bg-gray-50 min-h-screen font-inter">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-4">
+          <Button variant="outline" onClick={() => navigate('/tools')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Tools
+          </Button>
+        </div>
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Calculator className="w-8 h-8" />
@@ -285,3 +292,4 @@ async function apiRequest<T = any>(
   );
 }
 
+import { useNavigate } from "react-router-dom";

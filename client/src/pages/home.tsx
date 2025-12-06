@@ -3,7 +3,7 @@ import { FileUpload } from "@/components/file-upload";
 import { FilePreview } from "@/components/file-preview";
 import { CalculationProgress } from "@/components/calculation-progress";
 import { ResultsSection } from "@/components/results-section";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { LogOut } from "lucide-react";
@@ -11,6 +11,8 @@ import { type CalculationProgress as CalculationProgressType } from "@shared/sch
 import Footer from "@/components/footer";
 import Header from "@/components/header";
 import FileManager from "@/components/filemanager";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 type AppState = "upload" | "calculating" | "results";
 
@@ -27,6 +29,7 @@ type User = {
 };
 
 export default function Home() {
+  const navigate = useNavigate();
   const [appState, setAppState] = useState<AppState>("upload");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFiles>({});
   const [calculationId, setCalculationId] = useState<string>("");
@@ -112,6 +115,12 @@ export default function Home() {
       <Header />
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-4">
+          <Button variant="outline" onClick={() => navigate('/tools')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Tools
+          </Button>
+        </div>
         {/* File Upload Section */}
         {appState === "upload" && (
           <>
