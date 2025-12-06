@@ -1,3 +1,4 @@
+import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { queryClient } from "./lib/queryClient";

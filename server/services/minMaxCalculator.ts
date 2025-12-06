@@ -118,13 +118,13 @@ export class MinMaxCalculator {
       }
 
       // Calculate total quantity and date range
-      const totalQty = rows.reduce((sum, r) => sum + r.REF_QTY, 0);
+      const totalQty = rows.reduce((sum: number, r: { REF_DATE: string; REF_QTY: number }) => sum + r.REF_QTY, 0);
       
       // Parse dates
-      const dates = rows.map(r => {
+      const dates = rows.map((r: { REF_DATE: string; REF_QTY: number }) => {
         const d = this.parseDate(r.REF_DATE);
         return d ? d.getTime() : 0;
-      }).filter(t => t > 0).sort((a, b) => a - b);
+      }).filter((t: number) => t > 0).sort((a: number, b: number) => a - b);
 
       if (dates.length === 0) continue;
 

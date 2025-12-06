@@ -59,7 +59,7 @@ const defaultTools = [
   },
 ];
 
-const IconMap = {
+const IconMap: Record<string, React.ComponentType<any>> = {
   Search,
   Columns,
   Zap,
